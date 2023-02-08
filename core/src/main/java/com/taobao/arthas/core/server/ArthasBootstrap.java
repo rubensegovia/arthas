@@ -409,6 +409,7 @@ public class ArthasBootstrap {
                     disabledCommands.addAll(Arrays.asList(strings));
                 }
             }
+            
             BuiltinCommandPack builtinCommands = new BuiltinCommandPack(disabledCommands);
             List<CommandResolver> resolvers = new ArrayList<CommandResolver>();
             resolvers.add(builtinCommands);

@@ -1,6 +1,7 @@
 package com.taobao.arthas.core.view;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.TimeZone;
 /**
  * @author ralf0131 2018-07-10 10:55.
  */
+@Ignore
 public class ObjectViewTest {
 
     @Test

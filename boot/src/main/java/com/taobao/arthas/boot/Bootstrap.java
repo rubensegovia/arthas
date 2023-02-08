@@ -585,7 +585,7 @@ public class Bootstrap {
                 }
 
                 AnsiLog.info("Try to attach process " + pid);
-                AnsiLog.debug("Start arthas-core.jar args: " + attachArgs);
+                AnsiLog.info("Start arthas-core.jar args: " + attachArgs);
                 ProcessUtils.startArthasCore(pid, attachArgs);
 
                 AnsiLog.info("Attach process {} success.", pid);
@@ -626,7 +626,7 @@ public class Bootstrap {
         telnetArgs.add("" + bootstrap.getTelnetPortOrDefault());
 
         AnsiLog.info("arthas-client connect {} {}", bootstrap.getTargetIpOrDefault(), bootstrap.getTelnetPortOrDefault());
-        AnsiLog.debug("Start arthas-client.jar args: " + telnetArgs);
+        AnsiLog.info("Start arthas-client.jar args: " + telnetArgs);
 
         // fix https://github.com/alibaba/arthas/issues/833
         Thread.currentThread().setContextClassLoader(classLoader);
