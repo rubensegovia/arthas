@@ -23,6 +23,7 @@ import javassist.CtMethod;
 import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
@@ -46,6 +47,7 @@ public class InjectCommand extends AnnotatedCommand {
 
 
     private static volatile List<InjectEntry> injectEntries = new ArrayList<>();
+    private static volatile List<String> injectEntriesClasses = new ArrayList<>();
 
     private static volatile InjectEntry injectEntry = null;
     private static volatile ClassFileTransformer transformer = null;
@@ -110,7 +112,7 @@ public class InjectCommand extends AnnotatedCommand {
             return;
         } else {
             synchronized (InjectCommand.class) {
-                transformer = new CodeInjector2();
+                transformer = new CodeInjector3();
                 TransformerManager transformerManager = ArthasBootstrap.getInstance().getTransformerManager();
                 transformerManager.addRetransformer(transformer);
             }
@@ -246,20 +248,10 @@ public class InjectCommand extends AnnotatedCommand {
                         cp.appendClassPath(new LoaderClassPath(loader));
                         
                         LoaderClassPath cp1 = new LoaderClassPath(this.getClass().getClassLoader());
-                        cp.appendClassPath(cp1);
+                        cp.insertClassPath(cp1);
                         
                         CtClass cc = cp.get(entry.getClassName());
                         CtMethod m = cc.getDeclaredMethod(entry.getMethod());
-
-//                        logger.info("loader: {}",  loader);
-//                        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-//                        logger.info("current loader: {}",  classLoader);
-//                        ClassLoader parent = ClassLoader.getSystemClassLoader().getParent();
-//                        logger.info("system loader: {}",  parent);
-//                        ClassLoader logg = org.slf4j.Logger.class.getClassLoader();
-//                        logger.info("logger loader: {}",  logg);
-//
-//                        logger.info("class logger: {}",  cp.get("org.slf4j.Logger"));
                         
                         int insertedAt = m.insertAt(entry.getLineNumber(),
                             "org.slf4j.Logger loggerTest = org.slf4j.LoggerFactory.getLogger(" + entry.getClassName() + ".class); "
@@ -267,9 +259,7 @@ public class InjectCommand extends AnnotatedCommand {
                         
                         logger.info(">>> Inserted at {}", insertedAt);
                         
-                        cp.removeClassPath(cp1);
-                        m.insertAt(entry.getLineNumber() + 1, "com.inditex.amgadmic.domain.application.Application appl = new com.inditex.amgadmic.domain.application.Application();" 
-                            + "LOGGER.error(\"inject " + entry.getId() + "\");");
+                        cc.writeFile();
                         
                         byte[] byteCode = cc.toBytecode();
                         cc.detach();
@@ -287,6 +277,71 @@ public class InjectCommand extends AnnotatedCommand {
         }
     }
 
+    static class CodeInjector3 implements ClassFileTransformer {
+
+        @Override
+        public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
+            ProtectionDomain protectionDomain, byte[] classfileBuffer) {
+
+            className = className.replace('/', '.');
+
+            if (!injectEntriesClasses.contains(className)) {
+                return null;
+            }
+
+            new ClassPool(parent)
+
+            ClassPool cp = ClassPool.getDefault();
+            cp.appendClassPath(new LoaderClassPath(loader));
+            LoaderClassPath cp1 = new LoaderClassPath(this.getClass().getClassLoader());
+            cp.insertClassPath(cp1);
+            CtClass cc;
+            try {
+                cc = cp.get(className);
+            } catch (NotFoundException e) {
+                logger.error("NotFoundException", e);
+                throw new RuntimeException("Error injecting code. Class not found: " + className, e);
+            }
+
+            List<InjectEntry> allInjectEntries = allInjectEntries();
+
+            for (InjectEntry entry : allInjectEntries) {
+                logger.info("[Agent] Next entry {}: {}", entry.getId(), entry.getClassName());
+
+                if (className.equals(entry.getClassName())) {
+                    logger.info("[Agent] Transforming class {}", entry.getClassName());
+                    try {
+                        CtMethod m = cc.getDeclaredMethod(entry.getMethod());
+                        logger.info("[Agent] Transforming method {} with descriptor {}", entry.getMethod(), m.getMethodInfo().getDescriptor());
+                        int insertedAt = m.insertAt(entry.getLineNumber(),
+                            "org.slf4j.Logger loggerTest = org.slf4j.LoggerFactory.getLogger(" + entry.getClassName() + ".class); "
+                                + "loggerTest.error(\"code injector 3 " + entry.getId() + "\");");
+                        logger.info(">>> Inserted at {}", insertedAt);
+                    } catch (NotFoundException e) {
+                        logger.error("NotFoundException", e);
+                        throw new RuntimeException("Error injecting code. Method not found: " + entry.getMethod(), e);
+                    } catch (CannotCompileException e) {
+                        logger.error("CannotCompileException", e);
+                        throw new RuntimeException("Error injecting code. Compilation error: ", e);
+                    }
+                }
+            }
+
+            cc.detach();
+
+            try {
+                return cc.toBytecode();
+            } catch (CannotCompileException e) {
+                logger.error("CannotCompileException", e);
+                throw new RuntimeException("Error injecting code. Compilation error: ", e);
+            } catch (IOException e) {
+                logger.error("IOException", e);
+                throw new RuntimeException("Error injecting code. IOException: ", e);
+            }
+
+        }
+    }
+
     public static class InjectEntry {
         private static final AtomicInteger counter = new AtomicInteger(0);
         
@@ -296,9 +351,7 @@ public class InjectCommand extends AnnotatedCommand {
         private Integer lineNumber;
         private String code;
         private ClassLoader classLoader;
-
-        private int transformCount = 0;
-
+        
         public InjectEntry(String className, String method, Integer lineNumber, String code, ClassLoader classLoader) {
             id = counter.incrementAndGet();
             this.className = className;
@@ -306,10 +359,6 @@ public class InjectCommand extends AnnotatedCommand {
             this.lineNumber = lineNumber;
             this.code = code;
             this.classLoader = classLoader;
-        }
-
-        public void incTransformCount() {
-            transformCount++;
         }
 
         public int getId() {
@@ -360,13 +409,6 @@ public class InjectCommand extends AnnotatedCommand {
             this.classLoader = classLoader;
         }
 
-        public int getTransformCount() {
-            return transformCount;
-        }
-
-        public void setTransformCount(int transformCount) {
-            this.transformCount = transformCount;
-        }
     }
 
     public static synchronized void deleteAllInjectEntries() {
@@ -388,6 +430,7 @@ public class InjectCommand extends AnnotatedCommand {
             }
         }
         injectEntries = tmp;
+        setEntriesClasses();
         return result;
     }
 
@@ -401,6 +444,14 @@ public class InjectCommand extends AnnotatedCommand {
             }
         });
         injectEntries = tmp;
+        setEntriesClasses();
+    }
+    
+    private static void setEntriesClasses() {
+        injectEntriesClasses = new ArrayList<>();
+        for (InjectEntry entry : injectEntries) {
+            injectEntriesClasses.add(entry.getClassName());
+        }
     }
 
 }
