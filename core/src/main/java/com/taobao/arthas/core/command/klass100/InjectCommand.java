@@ -289,8 +289,6 @@ public class InjectCommand extends AnnotatedCommand {
                 return null;
             }
 
-            new ClassPool(parent)
-
             ClassPool cp = ClassPool.getDefault();
             cp.appendClassPath(new LoaderClassPath(loader));
             LoaderClassPath cp1 = new LoaderClassPath(this.getClass().getClassLoader());
