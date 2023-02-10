@@ -19,12 +19,8 @@ import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
-import javassist.CtNewMethod;
 import javassist.LoaderClassPath;
 import javassist.NotFoundException;
-import javassist.bytecode.AttributeInfo;
-import javassist.bytecode.CodeAttribute;
-import javassist.bytecode.LineNumberAttribute;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
