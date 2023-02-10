@@ -22,6 +22,9 @@ import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.LoaderClassPath;
 import javassist.NotFoundException;
+import javassist.bytecode.AttributeInfo;
+import javassist.bytecode.CodeAttribute;
+import javassist.bytecode.LineNumberAttribute;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
@@ -203,7 +206,7 @@ public class InjectCommand extends AnnotatedCommand {
             try {
                 cc = cp.get(fqn);
             } catch (NotFoundException e) {
-                logger.error("Error injecting code. Method not found: {}", fqn, e);
+                logger.error("Error injecting code. Class not found: {}", fqn, e);
                 return null;
             }
 
