@@ -29,12 +29,10 @@ import java.lang.instrument.Instrumentation;
 import java.nio.charset.StandardCharsets;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 @Name("inject")
 @Summary("inject code")
@@ -227,7 +225,8 @@ public class InjectCommand extends AnnotatedCommand {
                         deleteInjectEntry(entry.getId());
                         return null;
                     }
-                }}
+                }
+            }
 
             cc.detach();
 
@@ -243,7 +242,7 @@ public class InjectCommand extends AnnotatedCommand {
 
         }
     }
-    
+
     public static class InjectEntry {
         private static final AtomicInteger counter = new AtomicInteger(0);
         private int id;
