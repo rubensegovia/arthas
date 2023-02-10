@@ -19,6 +19,7 @@ import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
+import javassist.CtNewMethod;
 import javassist.LoaderClassPath;
 import javassist.NotFoundException;
 
@@ -138,9 +139,9 @@ public class InjectCommand extends AnnotatedCommand {
 
         for (Class<?> clazz : inst.getAllLoadedClasses()) {
             if (clazz.getName().equals(className)) {
+                String decoded = new String(DatatypeConverter.parseBase64Binary(code), StandardCharsets.UTF_8);
+                InjectEntry entry = new InjectEntry(className, method, methodDescriptor, line, decoded, clazz.getClassLoader());
                 try {
-                    String decoded = new String(DatatypeConverter.parseBase64Binary(code), StandardCharsets.UTF_8);
-                    InjectEntry entry = new InjectEntry(className, method, methodDescriptor, line, decoded, clazz.getClassLoader());
                     addInjectEntry(entry);
 
                     InjectModel injectModel = new InjectModel();
@@ -154,6 +155,7 @@ public class InjectCommand extends AnnotatedCommand {
                 } catch (Exception e) {
                     String message = "Injection failed for class: [" + clazz.getName() + "] " + e;
                     logger.error(message, e);
+                    deleteInjectEntry(entry.getId());
                     process.end(-1, message);
                     return;
                 }
