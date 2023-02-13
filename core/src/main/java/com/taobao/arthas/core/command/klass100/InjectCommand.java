@@ -146,9 +146,10 @@ public class InjectCommand extends AnnotatedCommand {
                     InjectModel injectModel = new InjectModel();
                     injectModel.setId(entry.getId());
                     injectModel.setInjectedClass(className);
-                    process.appendResult(injectModel);
 
                     inst.retransformClasses(clazz);
+
+                    process.appendResult(injectModel);
                     process.end();
                     return;
                 } catch (Exception e) {
@@ -203,7 +204,7 @@ public class InjectCommand extends AnnotatedCommand {
                 cc = cp.get(fqn);
             } catch (NotFoundException e) {
                 logger.error("Error injecting code. Class not found: {}", fqn, e);
-                return null;
+                throw new RuntimeException("Error injecting code. Class not found: " + fqn, e);
             }
 
             for (InjectEntry entry : injectEntries) {
@@ -220,11 +221,11 @@ public class InjectCommand extends AnnotatedCommand {
                     } catch (NotFoundException e) {
                         logger.error("Error injecting code. Method not found: {}", entry.getMethod(), e);
                         deleteInjectEntry(entry.getId());
-                        return null;
+                        throw new RuntimeException("Error injecting code. Method not found: " + entry.getMethod(), e);
                     } catch (CannotCompileException e) {
                         logger.error("Error injecting code. Compilation error", e);
                         deleteInjectEntry(entry.getId());
-                        return null;
+                        throw new RuntimeException("Error injecting code. Compilation error:", e);
                     }
                 }
             }
@@ -235,10 +236,10 @@ public class InjectCommand extends AnnotatedCommand {
                 return cc.toBytecode();
             } catch (CannotCompileException e) {
                 logger.error("Error injecting code. Compilation error", e);
-                return null;
+                throw new RuntimeException("Error injecting code. Compilation error", e);
             } catch (IOException e) {
                 logger.error("IOException", e);
-                return null;
+                throw new RuntimeException("IOException", e);
             }
 
         }
